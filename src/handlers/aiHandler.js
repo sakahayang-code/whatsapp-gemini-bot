@@ -96,7 +96,17 @@ async function handleAiInteraction(sock, msg, textQuery = '') {
 
     let userFriendlyError = `❌ *Maaf, terjadi kendala saat memproses permintaan:* \n${err.message}`;
 
-    if (err.message.includes('API Key') || err.message.includes('API_KEY')) {
+    if (err.message.includes('401') || err.message.includes('API key not valid') || err.message.includes('ACCESS_TOKEN_TYPE_UNSUPPORTED')) {
+      userFriendlyError = `🔑 *API Key Gemini Tidak Valid / Salah Format!*
+
+Google API menolak kunci tersebut dengan pesan: \`ACCESS_TOKEN_TYPE_UNSUPPORTED\`.
+Kunci API resmi Google Gemini harus diawali dengan format *AIzaSy...* (39 karakter).
+
+Cara mendapatkan API Key resmi gratis:
+1. Buka https://aistudio.google.com/app/apikey
+2. Klik *Create API Key*
+3. Salin kunci berawalan *AIzaSy...* ke file \`.env\``;
+    } else if (err.message.includes('API Key') || err.message.includes('API_KEY')) {
       userFriendlyError = '🔑 *Konfigurasi Gemini API Key belum disetel atau salah.* Harap periksa file `.env` di server.';
     } else if (err.message.includes('429') || err.message.includes('Quota')) {
       userFriendlyError = '⏳ *Batas kuota Gemini tercapai (Rate Limit).* Mohon tunggu 1-2 menit sebelum mengirim pesan lagi.';
