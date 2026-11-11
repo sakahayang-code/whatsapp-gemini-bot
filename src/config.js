@@ -1,4 +1,17 @@
-require('dotenv').config();
+const fs = require('fs');
+const path = require('path');
+const dotenv = require('dotenv');
+
+// Muat .env utama
+dotenv.config();
+
+// Fallback otomatis: jika GEMINI_API_KEY tidak ada di .env, muat dari .env.example
+if (!process.env.GEMINI_API_KEY) {
+  const examplePath = path.resolve(process.cwd(), '.env.example');
+  if (fs.existsSync(examplePath)) {
+    dotenv.config({ path: examplePath });
+  }
+}
 
 const config = {
   // Gemini Configuration
