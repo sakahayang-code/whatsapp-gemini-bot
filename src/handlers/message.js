@@ -26,11 +26,16 @@ async function handleIncomingMessage(sock, msg) {
   // ----------------------------------------------------
   // 1. CEK APAKAH INI PERINTAH (COMMAND BER-PREFIX)
   // ----------------------------------------------------
+  const trimmedText = rawText.trim();
   const prefixes = [config.bot.prefix, '!', '#', '/'];
-  const matchedPrefix = prefixes.find(p => rawText.startsWith(p));
+  const matchedPrefix = prefixes.find(p => trimmedText.startsWith(p));
 
-  if (matchedPrefix) {
-    const trimmed = rawText.slice(matchedPrefix.length).trim();
+  // Perintah umum yang dapat dipanggil tanpa prefix di chat pribadi (misal: "menu", "help", "ping")
+  const commonNoPrefixCommands = ['menu', 'help', 'ping', 'status', 'reset', 'clear'];
+  const isNoPrefixCommand = !isGroup && commonNoPrefixCommands.includes(trimmedText.toLowerCase());
+
+  if (matchedPrefix || isNoPrefixCommand) {
+    const trimmed = matchedPrefix ? trimmedText.slice(matchedPrefix.length).trim() : trimmedText;
     const parts = trimmed.split(/\s+/);
     const command = parts[0];
     const args = parts.slice(1);
