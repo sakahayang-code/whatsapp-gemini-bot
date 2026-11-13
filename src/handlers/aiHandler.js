@@ -96,18 +96,15 @@ async function handleAiInteraction(sock, msg, textQuery = '') {
 
     let userFriendlyError = `❌ *Maaf, terjadi kendala saat memproses permintaan:* \n${err.message}`;
 
-    if (err.message.includes('401') || err.message.includes('API key not valid') || err.message.includes('ACCESS_TOKEN_TYPE_UNSUPPORTED')) {
-      userFriendlyError = `🔑 *API Key Gemini Tidak Valid / Salah Format!*
-
-Google API menolak kunci tersebut dengan pesan: \`ACCESS_TOKEN_TYPE_UNSUPPORTED\`.
-Kunci API resmi Google Gemini harus diawali dengan format *AIzaSy...* (39 karakter).
-
-Cara mendapatkan API Key resmi gratis:
-1. Buka https://aistudio.google.com/app/apikey
-2. Klik *Create API Key*
-3. Salin kunci berawalan *AIzaSy...* ke file \`.env\``;
+    if (err.message.includes('CONSUMER_SUSPENDED')) {
+      userFriendlyError = `🚫 *Project Kunci API Google Ditangguhkan (Suspended)!*
+Project Google Cloud yang terkait dengan kunci API ini sedang dibekukan oleh Google.
+Solusi: Silakan ganti dengan kunci API Google aktif lainnya di file \`.env\`.`;
+    } else if (err.message.includes('401') || err.message.includes('API key not valid')) {
+      userFriendlyError = `🔑 *Kunci API Tidak Valid atau Kadaluarsa!*
+Google API menolak kunci tersebut. Pastikan kunci API (awalan AQ. atau lainnya) yang Anda masukkan masih aktif.`;
     } else if (err.message.includes('API Key') || err.message.includes('API_KEY')) {
-      userFriendlyError = '🔑 *Konfigurasi Gemini API Key belum disetel atau salah.* Harap periksa file `.env` di server.';
+      userFriendlyError = '🔑 *Konfigurasi Gemini API Key belum disetel.* Harap periksa file `.env` di server.';
     } else if (err.message.includes('429') || err.message.includes('Quota')) {
       userFriendlyError = '⏳ *Batas kuota Gemini tercapai (Rate Limit).* Mohon tunggu 1-2 menit sebelum mengirim pesan lagi.';
     }

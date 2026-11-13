@@ -99,9 +99,16 @@ class GeminiService {
             }
           }
 
-          // Jika error adalah model tidak ditemukan (404), coba model fallback berikutnya
-          if (errMsg.includes('404') || errMsg.includes('not found') || errMsg.includes('is not supported')) {
-            logger.warn(`Model '${modelToTry}' tidak ditemukan pada API. Mencoba fallback ke model lain...`);
+          // Jika error adalah model tidak ditemukan (404), sedang padat (503), atau tidak tersedia, coba model fallback berikutnya
+          if (
+            errMsg.includes('404') ||
+            errMsg.includes('not found') ||
+            errMsg.includes('is not supported') ||
+            errMsg.includes('503') ||
+            errMsg.includes('high demand') ||
+            errMsg.includes('no longer available')
+          ) {
+            logger.warn(`Model '${modelToTry}' sedang padat (503) atau tidak tersedia. Mencoba fallback otomatis...`);
             break; // keluar dari loop key, coba model selanjutnya
           }
 
