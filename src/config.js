@@ -21,17 +21,10 @@ const config = {
       .split(',')
       .map(k => k.trim())
       .filter(Boolean),
-    // Model yang diminta (default: gemini-3.8-flash-high dengan auto-fallback)
-    model: process.env.GEMINI_MODEL || 'gemini-3.8-flash-high',
-    // Daftar model alternatif jika model utama tidak tersedia / limit
-    fallbackModels: [
-      'gemini-3.8-flash',
-      'gemini-3.7-flash',
-      'gemini-3.5-flash',
-      'gemini-flash-latest',
-      'gemini-2.0-flash',
-      'gemini-1.5-flash'
-    ],
+    // Model yang diminta: Hanya gunakan gemini-3.8-flash secara eksklusif
+    model: process.env.GEMINI_MODEL || 'gemini-3.8-flash',
+    // Tidak ada fallback ke model usang (1.5/2.0) yang sudah 404 Not Found
+    fallbackModels: [],
     maxHistory: parseInt(process.env.MAX_HISTORY_LENGTH || '20', 10),
     temperature: parseFloat(process.env.GEMINI_TEMPERATURE || '0.7'),
     topP: parseFloat(process.env.GEMINI_TOP_P || '0.95'),

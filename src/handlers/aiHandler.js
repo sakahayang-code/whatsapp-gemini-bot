@@ -107,6 +107,8 @@ Google API menolak kunci tersebut. Pastikan kunci API (awalan AQ. atau lainnya) 
       userFriendlyError = '🔑 *Konfigurasi Gemini API Key belum disetel.* Harap periksa file `.env` di server.';
     } else if (err.message.includes('429') || err.message.includes('Quota')) {
       userFriendlyError = '⏳ *Batas kuota Gemini tercapai (Rate Limit).* Mohon tunggu 1-2 menit sebelum mengirim pesan lagi.';
+    } else if (err.message.includes('503') || err.message.includes('high demand') || err.message.includes('Overloaded')) {
+      userFriendlyError = '⚡ *Server Gemini 3.8 Flash sedang mengalami lonjakan trafik tinggi dari Google.* Mohon coba ulangi pertanyaan Anda beberapa saat lagi.';
     }
 
     return await reply(userFriendlyError);

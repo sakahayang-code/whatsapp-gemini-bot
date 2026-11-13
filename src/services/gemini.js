@@ -62,64 +62,51 @@ class GeminiService {
   }
 
   /**
-   * Mengirim request dengan mekanisme otomatis retry kunci dan fallback model
+   * Mengirim request secara eksklusif ke model aktif (gemini-3.8-flash) dengan retry otomatis
    */
   async executeWithFallback(chatId, operation) {
-    const modelsToTry = [this.activeModel, ...this.fallbackModels.filter(m => m !== this.activeModel)];
+    const modelToUse = this.activeModel; // Hanya gunakan gemini-3.8-flash
     let lastError = null;
+    const maxRetries = 3;
 
-    for (const modelToTry of modelsToTry) {
-      // Coba dengan API key saat ini atau rotate jika limit
-      let keyAttempts = 0;
-      const maxKeyAttempts = Math.max(1, this.apiKeys.length);
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        const modelInstance = this.getModelInstance(chatId, modelToUse);
+        return await operation(modelInstance);
+      } catch (error) {
+        lastError = error;
+        const errMsg = error.message || '';
 
-      while (keyAttempts < maxKeyAttempts) {
-        try {
-          const modelInstance = this.getModelInstance(chatId, modelToTry);
-          const result = await operation(modelInstance);
-
-          // Jika model yang berhasil berbeda dari activeModel awal, catat transisi
-          if (modelToTry !== this.activeModel && !this.hasWarnedModelFallback) {
-            logger.warn(`Model '${this.activeModel}' tidak dapat diakses di endpoint saat ini. Mengalihkan otomatis ke '${modelToTry}'.`);
-            this.activeModel = modelToTry;
-            this.hasWarnedModelFallback = true;
+        // Jika error adalah 429 Quota Exceeded dan ada API key lain, rotate key
+        if (errMsg.includes('429') || errMsg.includes('Quota') || errMsg.includes('ResourceExhausted')) {
+          logger.warn(`Quota limit pada kunci aktif. Mencoba merotasi kunci...`);
+          if (this.rotateApiKey()) {
+            continue;
           }
-
-          return result;
-        } catch (error) {
-          lastError = error;
-          const errMsg = error.message || '';
-
-          // Jika error adalah 429 Quota Exceeded dan ada API key lain, rotate key
-          if (errMsg.includes('429') || errMsg.includes('Quota') || errMsg.includes('ResourceExhausted')) {
-            logger.warn(`Quota limit pada kunci aktif. Mencoba merotasi kunci...`);
-            if (this.rotateApiKey()) {
-              keyAttempts++;
-              continue;
-            }
-          }
-
-          // Jika error adalah model tidak ditemukan (404), sedang padat (503), atau tidak tersedia, coba model fallback berikutnya
-          if (
-            errMsg.includes('404') ||
-            errMsg.includes('not found') ||
-            errMsg.includes('is not supported') ||
-            errMsg.includes('503') ||
-            errMsg.includes('high demand') ||
-            errMsg.includes('no longer available')
-          ) {
-            logger.warn(`Model '${modelToTry}' sedang padat (503) atau tidak tersedia. Mencoba fallback otomatis...`);
-            break; // keluar dari loop key, coba model selanjutnya
-          }
-
-          // Error lainnya: throw atau break
-          logger.error(`Kesalahan eksekusi Gemini (${modelToTry}):`, errMsg);
-          break;
         }
+
+        // Jika error 503 (high demand) atau timeout, tunggu sejenak dan coba lagi
+        if (
+          errMsg.includes('503') ||
+          errMsg.includes('high demand') ||
+          errMsg.includes('Overloaded') ||
+          errMsg.includes('timeout')
+        ) {
+          if (attempt < maxRetries) {
+            const delayMs = attempt * 2000;
+            logger.warn(`Model '${modelToUse}' sedang sibuk di server Google. Mencoba ulang dalam ${delayMs / 1000} detik (Percobaan ${attempt}/${maxRetries})...`);
+            await new Promise(r => setTimeout(r, delayMs));
+            continue;
+          }
+        }
+
+        // Error fatal lainnya (misal: 403 Suspended / 401 Unauthorized)
+        logger.error(`Kesalahan eksekusi Gemini (${modelToUse}):`, errMsg);
+        break;
       }
     }
 
-    throw lastError || new Error('Gagal mendapatkan respons dari Gemini API.');
+    throw lastError || new Error(`Gagal mendapatkan respons dari model ${modelToUse}.`);
   }
 
   /**
